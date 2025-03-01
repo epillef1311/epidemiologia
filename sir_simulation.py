@@ -3,13 +3,15 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 class SIRSimulation:
-    def __init__(self, grid_size=50, tau=0.2, gamma=0.3, steps=100, initial_infected=10):
+    def __init__(self, grid_size=50, tau=0.2, gamma=0.3, steps=100, initial_infected=10, recovery_time=10):
         self.grid_size = grid_size
         self.tau = tau
         self.gamma = gamma
         self.steps = steps
+        self.recovery_time = recovery_time
         
         self.grid = np.zeros((grid_size, grid_size), dtype=int)
+        self.infection_duration = np.zeros((grid_size, grid_size), dtype=int)
         
         idx = np.random.choice(grid_size * grid_size, initial_infected, replace=False)
         self.grid[np.unravel_index(idx, (grid_size, grid_size))] = 1
@@ -24,6 +26,7 @@ class SIRSimulation:
     
     def update(self, frame):
         new_grid = self.grid.copy()
+        new_infection_duration = self.infection_duration.copy()
         
         infected = np.argwhere(self.grid == 1)
         susceptible = np.argwhere(self.grid == 0)
@@ -32,12 +35,17 @@ class SIRSimulation:
             if any(self.grid[x, y] == 1 for x, y in self.get_neighbors(i, j)):
                 if np.random.rand() < self.tau:
                     new_grid[i, j] = 1
+                    new_infection_duration[i, j] = 1
         
         for i, j in infected:
-            if np.random.rand() < self.gamma:
-                new_grid[i, j] = 2
+            if new_infection_duration[i, j] >= self.recovery_time:
+                new_grid[i, j] = 2  # Recuperado e imune
+                new_infection_duration[i, j] = 0
+            else:
+                new_infection_duration[i, j] += 1
         
         self.grid = new_grid
+        self.infection_duration = new_infection_duration
         self.mat.set_array(self.grid)
         return [self.mat]
     
@@ -50,6 +58,5 @@ class SIRSimulation:
         ani = animation.FuncAnimation(fig, self.update, frames=self.steps, interval=100, blit=True)
         plt.show()
 
-sim = SIRSimulation(grid_size=50, tau=0.3, gamma=0.1, steps=100, initial_infected=10)
+sim = SIRSimulation(grid_size=50, tau=0.3, gamma=0.1, steps=100, initial_infected=1, recovery_time=10)
 sim.run()
-
